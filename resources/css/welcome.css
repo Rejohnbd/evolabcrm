@@ -1,0 +1,384 @@
+/* Google Fonts imports */
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@300;400;500;600;700;800&display=swap');
+
+html.welcome-active,
+body.welcome-active {
+  background: #000 !important;
+  color: #fff !important;
+  font-family: 'Manrope', sans-serif !important;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.welcome-root {
+  background: #000;
+  color: #fff;
+  font-family: 'Manrope', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding-bottom: 80px;
+}
+
+.welcome-root * {
+  box-sizing: border-box;
+}
+
+.welcome-root .display-font {
+  font-family: 'Anton', sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.welcome-root input,
+.welcome-root textarea,
+.welcome-root select,
+.welcome-root button {
+  font-family: inherit;
+}
+
+.welcome-root input[type=number]::-webkit-outer-spin-button,
+.welcome-root input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.welcome-root input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.welcome-root button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.welcome-root input,
+.welcome-root textarea,
+.welcome-root select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.welcome-root input:focus,
+.welcome-root textarea:focus,
+.welcome-root select:focus {
+  border-color: #DC2626;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.welcome-root textarea {
+  resize: none;
+  min-height: 60px;
+}
+
+.welcome-root .hidden {
+  display: none !important;
+}
+
+.welcome-root .red-dot {
+  color: #DC2626;
+}
+
+.welcome-root .red-btn {
+  background: #DC2626;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 12px 24px;
+  text-decoration: none;
+  transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.welcome-root .red-btn:hover {
+  background: #B91C1C;
+}
+
+.welcome-root .red-btn:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
+}
+
+.welcome-root .white-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 12px 24px;
+  text-decoration: none;
+  transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.welcome-root .white-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.welcome-root .orange-btn {
+  background: #EA580C;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 12px 24px;
+  text-decoration: none;
+  transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.welcome-root .orange-btn:hover {
+  background: #C2410C;
+}
+
+.welcome-root .label-tiny {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.welcome-root .card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.welcome-root .card-hover:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.welcome-root .header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(8px);
+  z-index: 40;
+}
+
+.welcome-root .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.welcome-root .container-tight {
+  max-width: 380px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.welcome-root .badge {
+  font-size: 9px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+  display: inline-block;
+  text-transform: uppercase;
+}
+
+.welcome-root .badge-dealer {
+  background: rgba(220, 38, 38, 0.2);
+  color: #EF4444;
+}
+
+.welcome-root .badge-priority {
+  background: rgba(249, 115, 22, 0.2);
+  color: #FB923C;
+}
+
+.welcome-root .badge-pending {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.welcome-root .badge-in_progress {
+  background: rgba(220, 38, 38, 0.2);
+  color: #EF4444;
+}
+
+.welcome-root .badge-awaiting_validation {
+  background: rgba(234, 179, 8, 0.2);
+  color: #EAB308;
+}
+
+.welcome-root .badge-completed {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22C55E;
+}
+
+.welcome-root .badge-rework {
+  background: rgba(249, 115, 22, 0.2);
+  color: #F97316;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.welcome-root .pulse {
+  animation: pulse 2s infinite;
+}
+
+.welcome-root .pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #EF4444;
+}
+
+.welcome-root .modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.welcome-root .modal {
+  background: #09090B;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+  margin-top: 40px;
+}
+
+.welcome-root .photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.welcome-root .photo-cell {
+  aspect-ratio: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.welcome-root .photo-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.welcome-root .photo-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  padding: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.welcome-root .photo-remove:hover {
+  background: #DC2626;
+}
+
+.welcome-root .add-photo-btn {
+  width: 100%;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+.welcome-root .add-photo-btn:hover {
+  border-color: #DC2626;
+  background: rgba(220, 38, 38, 0.05);
+  color: #fff;
+}
+
+.welcome-root .tab-btn {
+  padding: 10px 16px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+}
+
+.welcome-root .tab-btn.active {
+  color: #fff;
+  border-color: #DC2626;
+}
+
+.welcome-root .tab-btn .count {
+  color: #EF4444;
+  margin-left: 4px;
+}
+
+.welcome-root input[type=range] {
+  background: transparent;
+  padding: 0;
+  border: none;
+  accent-color: #DC2626;
+}
+
+.welcome-root ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.welcome-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.welcome-root ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
