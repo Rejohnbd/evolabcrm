@@ -1,22 +1,21 @@
-// resources/js/Pages/EvoLab/Welcome.tsx
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import '../../css/welcome.css';
 
-const MANAGER_PASSWORD = 'evolab2026';
-
 export default function Welcome() {
+    const { errors } = usePage().props;
     const [name, setName] = useState('');
     const [role, setRole] = useState<'technician' | 'manager'>('technician');
     const [password, setPassword] = useState('');
+    const [nameError, setNameError] = useState(false);
     const [passwordError, setPasswordError] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [loginNameError, setLoginNameError] = useState('');
+    const [loginPasswordError, setLoginPasswordError] = useState('');
 
-    // Toggle welcome-active class on mount/unmount to apply scoped dark body styling
     useEffect(() => {
         const htmlElement = document.documentElement;
         const bodyElement = document.body;
-
         htmlElement.classList.add('welcome-active');
         bodyElement.classList.add('welcome-active');
 
@@ -26,20 +25,117 @@ export default function Welcome() {
         };
     }, []);
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    // Clear errors when inputs change
+    useEffect(() => {
+        if (name) {
+            setLoginNameError('');
+            setNameError(false);
+        }
+    }, [name]);
+
+    useEffect(() => {
+        if (password) {
+            setLoginPasswordError('');
+            setPasswordError(false);
+        }
+    }, [password]);
+
+    // Properly handle errors from server
+    useEffect(() => {
+        // console.log('Errors from server:', errors);
+
+        if (errors && Object.keys(errors).length > 0) {
+            if (errors.name) {
+                setLoginNameError(errors.name as string);
+                setNameError(true);
+            }
+            if (errors.password) {
+                setLoginPasswordError(errors.password as string);
+                setPasswordError(true);
+            }
+        } else {
+            // Clear errors when no errors in props
+            // This helps when retrying login
+            setLoginNameError('');
+            setLoginPasswordError('');
+            setNameError(false);
+            setPasswordError(false);
+        }
+    }, [errors]);
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
         e.preventDefault();
 
-        if (!name.trim()) return;
+        // Clear previous errors before new submission
+        setLoginNameError('');
+        setLoginPasswordError('');
+        setNameError(false);
+        setPasswordError(false);
 
-        if (role === 'manager' && password !== MANAGER_PASSWORD) {
-            setPasswordError(true);
+        if (!name.trim()) {
+            setNameError(true);
+            setLoginNameError('Name is required');
             return;
         }
 
-        router.post('/evolab/login', {
-            name: name.trim(),
-            role,
-        });
+        if (role === 'technician') {
+            router.post(
+                'technician-login',
+                {
+                    name: name.trim(),
+                    role,
+                },
+                {
+                    // Add onError callback to handle errors manually
+                    onError: (error) => {
+                        console.log('Login error:', error);
+                        if (error.name) {
+                            setLoginNameError(error.name);
+                            setNameError(true);
+                        }
+                        if (error.password) {
+                            setLoginPasswordError(error.password);
+                            setPasswordError(true);
+                        }
+                    },
+                    // FIX: Preserve state during navigation
+                    preserveState: true,
+                    preserveScroll: true,
+                },
+            );
+        }
+
+        if (role === 'manager') {
+            if (!password) {
+                setPasswordError(true);
+                setLoginPasswordError('Password is required');
+                return;
+            }
+
+            router.post(
+                'manager-login',
+                {
+                    name: name.trim(),
+                    password,
+                    role,
+                },
+                {
+                    onError: (error) => {
+                        console.log('Login error:', error);
+                        if (error.name) {
+                            setLoginNameError(error.name);
+                            setNameError(true);
+                        }
+                        if (error.password) {
+                            setLoginPasswordError(error.password);
+                            setPasswordError(true);
+                        }
+                    },
+                    preserveState: true,
+                    preserveScroll: true,
+                },
+            );
+        }
     };
 
     const isSubmitDisabled = !name.trim() || (role === 'manager' && !password);
@@ -48,69 +144,155 @@ export default function Welcome() {
         <div className="welcome-root">
             <Head title="EvoLab Operations">
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-                <link href="https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+                <link
+                    rel="preconnect"
+                    href="https://fonts.gstatic.com"
+                    crossOrigin="anonymous"
+                />
+                <link
+                    href="https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@300;400;500;600;700;800&display=swap"
+                    rel="stylesheet"
+                />
             </Head>
 
-            <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
-                <div className="container-tight" style={{ width: "100%" }}>
-                    <div style={{ textAlign: "center", marginBottom: "40px" }}>
-                        <div className="display-font" style={{ fontSize: "60px", marginBottom: "8px" }}>EVO<span className="red-dot">.</span>LAB</div>
+            <div
+                style={{
+                    minHeight: '100vh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '24px',
+                }}
+            >
+                <div className="container-tight" style={{ width: '100%' }}>
+                    <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                        <div
+                            className="display-font"
+                            style={{ fontSize: '60px', marginBottom: '8px' }}
+                        >
+                            EVO<span className="red-dot">.</span>LAB
+                        </div>
                         <div className="label-tiny">Operations App</div>
                     </div>
 
                     <form onSubmit={handleSubmit}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '16px',
+                            }}
+                        >
                             <div>
-                                <label className="label-tiny" style={{ display: "block", marginBottom: "8px", letterSpacing: "0.25em" }}>YOUR NAME</label>
+                                <label
+                                    className="label-tiny"
+                                    style={{
+                                        display: 'block',
+                                        marginBottom: '8px',
+                                        letterSpacing: '0.25em',
+                                    }}
+                                >
+                                    YOUR NAME
+                                </label>
                                 <input
                                     type="text"
                                     placeholder="e.g. Adam"
                                     autoComplete="off"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border:
+                                            nameError || loginNameError
+                                                ? '1px solid #EF4444'
+                                                : '1px solid rgba(255,255,255,0.1)',
+                                        color: '#fff',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        outline: 'none',
+                                        width: '100%',
+                                    }}
                                 />
+                                {(nameError || loginNameError) && (
+                                    <div
+                                        style={{
+                                            fontSize: '12px',
+                                            color: '#EF4444',
+                                            marginTop: '6px',
+                                        }}
+                                    >
+                                        {loginNameError ||
+                                            (nameError && 'Name is required')}
+                                    </div>
+                                )}
                             </div>
 
                             <div>
-                                <label className="label-tiny" style={{ display: "block", marginBottom: "8px", letterSpacing: "0.25em" }}>ROLE</label>
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                                <label
+                                    className="label-tiny"
+                                    style={{
+                                        display: 'block',
+                                        marginBottom: '8px',
+                                        letterSpacing: '0.25em',
+                                    }}
+                                >
+                                    ROLE
+                                </label>
+                                <div
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: '8px',
+                                    }}
+                                >
                                     <button
                                         type="button"
-                                        className="role-btn"
-                                        data-role="technician"
                                         onClick={() => {
                                             setRole('technician');
                                             setShowPassword(false);
                                             setPasswordError(false);
+                                            setLoginPasswordError('');
                                         }}
                                         style={{
-                                            padding: "12px",
-                                            borderRadius: "8px",
-                                            border: role === 'technician' ? "1px solid #DC2626" : "1px solid rgba(255,255,255,0.1)",
-                                            background: role === 'technician' ? "#DC2626" : "rgba(255,255,255,0.05)",
-                                            fontSize: "14px",
-                                            cursor: "pointer"
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border:
+                                                role === 'technician'
+                                                    ? '1px solid #DC2626'
+                                                    : '1px solid rgba(255,255,255,0.1)',
+                                            background:
+                                                role === 'technician'
+                                                    ? '#DC2626'
+                                                    : 'rgba(255,255,255,0.05)',
+                                            fontSize: '14px',
+                                            cursor: 'pointer',
+                                            color: '#fff',
                                         }}
                                     >
                                         Technician
                                     </button>
                                     <button
                                         type="button"
-                                        className="role-btn"
-                                        data-role="manager"
                                         onClick={() => {
                                             setRole('manager');
                                             setShowPassword(true);
                                             setPasswordError(false);
+                                            setLoginPasswordError('');
                                         }}
                                         style={{
-                                            padding: "12px",
-                                            borderRadius: "8px",
-                                            border: role === 'manager' ? "1px solid #DC2626" : "1px solid rgba(255,255,255,0.1)",
-                                            background: role === 'manager' ? "#DC2626" : "rgba(255,255,255,0.05)",
-                                            fontSize: "14px",
-                                            cursor: "pointer"
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border:
+                                                role === 'manager'
+                                                    ? '1px solid #DC2626'
+                                                    : '1px solid rgba(255,255,255,0.1)',
+                                            background:
+                                                role === 'manager'
+                                                    ? '#DC2626'
+                                                    : 'rgba(255,255,255,0.05)',
+                                            fontSize: '14px',
+                                            cursor: 'pointer',
+                                            color: '#fff',
                                         }}
                                     >
                                         🔒 Manager
@@ -119,8 +301,16 @@ export default function Welcome() {
                             </div>
 
                             {showPassword && (
-                                <div id="password-section">
-                                    <label className="label-tiny" style={{ display: "block", marginBottom: "8px" }}>Manager Password</label>
+                                <div>
+                                    <label
+                                        className="label-tiny"
+                                        style={{
+                                            display: 'block',
+                                            marginBottom: '8px',
+                                        }}
+                                    >
+                                        Manager Password
+                                    </label>
                                     <input
                                         type="password"
                                         placeholder="••••••••"
@@ -129,29 +319,65 @@ export default function Welcome() {
                                         onChange={(e) => {
                                             setPassword(e.target.value);
                                             setPasswordError(false);
+                                            setLoginPasswordError('');
+                                        }}
+                                        style={{
+                                            background:
+                                                'rgba(255,255,255,0.05)',
+                                            border:
+                                                passwordError ||
+                                                loginPasswordError
+                                                    ? '1px solid #EF4444'
+                                                    : '1px solid rgba(255,255,255,0.1)',
+                                            color: '#fff',
+                                            borderRadius: '8px',
+                                            padding: '10px 14px',
+                                            outline: 'none',
+                                            width: '100%',
                                         }}
                                     />
-                                    {passwordError && (
-                                        <div style={{ fontSize: "12px", color: "#EF4444", marginTop: "6px" }}>Incorrect password</div>
+                                    {(passwordError || loginPasswordError) && (
+                                        <div
+                                            style={{
+                                                fontSize: '12px',
+                                                color: '#EF4444',
+                                                marginTop: '6px',
+                                            }}
+                                        >
+                                            {loginPasswordError ||
+                                                'Incorrect password'}
+                                        </div>
                                     )}
-                                    <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", marginTop: "6px" }}>Demo: evolab2026</div>
+                                    <div
+                                        style={{
+                                            fontSize: '10px',
+                                            color: 'rgba(255,255,255,0.3)',
+                                            marginTop: '6px',
+                                        }}
+                                    >
+                                        Demo: evolab2026
+                                    </div>
                                 </div>
                             )}
 
                             <button
                                 type="submit"
-                                id="login-submit"
                                 className="red-btn display-font"
                                 disabled={isSubmitDisabled}
                                 style={{
-                                    padding: "16px",
-                                    borderRadius: "12px",
-                                    fontSize: "18px",
-                                    letterSpacing: "0.15em",
-                                    marginTop: "16px",
-                                    width: "100%",
-                                    cursor: isSubmitDisabled ? "not-allowed" : "pointer",
-                                    opacity: isSubmitDisabled ? 0.5 : 1
+                                    padding: '16px',
+                                    borderRadius: '12px',
+                                    fontSize: '18px',
+                                    letterSpacing: '0.15em',
+                                    marginTop: '16px',
+                                    width: '100%',
+                                    cursor: isSubmitDisabled
+                                        ? 'not-allowed'
+                                        : 'pointer',
+                                    opacity: isSubmitDisabled ? 0.5 : 1,
+                                    background: '#DC2626',
+                                    color: '#fff',
+                                    border: 'none',
                                 }}
                             >
                                 ENTER
@@ -159,7 +385,17 @@ export default function Welcome() {
                         </div>
                     </form>
 
-                    <div style={{ textAlign: "center", fontSize: "10px", color: "rgba(255,255,255,0.3)", marginTop: "32px", letterSpacing: "0.1em" }}>DEMO BUILD · v0.3</div>
+                    <div
+                        style={{
+                            textAlign: 'center',
+                            fontSize: '10px',
+                            color: 'rgba(255,255,255,0.3)',
+                            marginTop: '32px',
+                            letterSpacing: '0.1em',
+                        }}
+                    >
+                        DEMO BUILD · v0.3
+                    </div>
                 </div>
             </div>
         </div>
