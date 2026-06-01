@@ -11,8 +11,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const { auth } = usePage().props;
     const user = auth?.user;
 
-    console.log('Auth data:', auth);
-
     // Handle unauthorized access
     useEffect(() => {
         if (!user) {

@@ -9,12 +9,16 @@ import DashboardLayout from './layouts/dashboard-layout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
-const EVOLAB_PAGES = ['technician', 'technician/dashboard', 'manager'];
+const EVOLAB_PAGES = [
+    'technician',
+    'technician/dashboard',
+    'manager',
+    'manager/dashboard',
+];
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
-        console.log('Layout name:', name);
         switch (true) {
             case name === 'welcome':
                 return null;

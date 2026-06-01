@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
 
-class TechnicianMiddleware
+class ManagerMiddleware
 {
     /**
      * Handle an incoming request.
@@ -23,8 +23,8 @@ class TechnicianMiddleware
 
         $user = Auth::user();
 
-        // Allow only technician roles
-        if ($user->role !== 'technician') {
+        // Allow only manager roles
+        if ($user->role !== 'manager') {
             abort(403, 'Unauthorized access.');
         }
 

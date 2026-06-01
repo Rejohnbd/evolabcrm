@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\WelcomeController;
 use Illuminate\Support\Facades\Route;
@@ -13,9 +14,14 @@ Route::middleware(['technician'])->group(function () {
     Route::get('/technician', [TechnicianController::class, 'index'])->name('technician');
 });
 
-Route::post('/evolab-logout', [WelcomeController::class, 'logout'])->name('evolab-logout')->middleware(['technician']);
+// Manager routes
+Route::post('/manager-login', [WelcomeController::class, 'managerLogin'])->name('manager-login');
+Route::middleware(['manager'])->group(function () {
+    Route::get('/manager', [ManagerController::class, 'index'])->name('manager');
+});
 
-// Route::post('/manager', [WelcomeController::class, 'manager'])->name('manager');
+Route::post('/evolab-logout', [WelcomeController::class, 'logout'])->name('evolab-logout')->middleware('auth');
+
 
 // Route::prefix('evolab')->group(function () {
 //     Route::get('/dashboard', [WelcomeController::class, 'technicianDashboard'])

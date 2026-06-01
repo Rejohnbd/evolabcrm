@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -40,6 +41,40 @@ class WelcomeController extends Controller
 
 
         return redirect()->route('technician');
+    }
+
+    public function managerLogin(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'role' => 'required|in:manager',
+            'password' => 'required|string'
+        ]);
+
+        $name = trim($request->name);
+
+        // Find manager by name (case-insensitive)
+        $user = User::whereRaw('LOWER(name) = ?', [strtolower($name)])
+            ->where('role', 'manager')
+            ->first();
+
+        if (!$user) {
+            return back()->withErrors([
+                'name' => 'Manager not found. Please check the name and try again.'
+            ])->onlyInput('name');
+        }
+
+        // Check password against database hashed password
+        if (!Hash::check($request->password, $user->password)) {
+            return back()->withErrors([
+                'password' => 'Incorrect password. Please try again.'
+            ])->onlyInput('name');
+        }
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return redirect()->route('manager');
     }
 
     // public function technicianDashboard(Request $request): Response
