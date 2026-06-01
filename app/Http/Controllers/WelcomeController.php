@@ -35,6 +35,10 @@ class WelcomeController extends Controller
 
         Auth::login($user);
 
+        // Regenerate session to prevent session fixation
+        $request->session()->regenerate();
+
+
         return redirect()->route('technician');
     }
 
@@ -57,24 +61,24 @@ class WelcomeController extends Controller
     //     ]);
     // }
 
-    public function technician(Request $request): Response
-    {
-        // Get or initialize session data
-        $shift = [
-            'punchedIn' => $request->session()->get('shift.punched_in', false),
-            'punchTime' => $request->session()->get('shift.punch_time'),
-        ];
+    // public function technician(Request $request): Response
+    // {
+    //     // Get or initialize session data
+    //     $shift = [
+    //         'punchedIn' => $request->session()->get('shift.punched_in', false),
+    //         'punchTime' => $request->session()->get('shift.punch_time'),
+    //     ];
 
-        $user = [
-            'name' => $request->session()->get('user.name', 'Adam'),
-            'role' => 'technician',
-        ];
+    //     $user = [
+    //         'name' => $request->session()->get('user.name', 'Adam'),
+    //         'role' => 'technician',
+    //     ];
 
-        return Inertia::render('technician', [
-            'shift' => $shift,
-            'user' => $user,
-        ]);
-    }
+    //     return Inertia::render('technician', [
+    //         'shift' => $shift,
+    //         'user' => $user,
+    //     ]);
+    // }
 
     // public function checkin(Request $request, string $jobId): Response
     // {
@@ -148,9 +152,12 @@ class WelcomeController extends Controller
     //     ]);
     // }
 
-    public function logout()
+    public function logout(Request $request)
     {
         Auth::logout();
+        // Invalidate and regenerate session
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
         return redirect()->route('home');
     }
 }

@@ -9,8 +9,12 @@ Route::get('/', [WelcomeController::class, 'index'])->name('home');
 
 // Technician routes
 Route::post('/technician-login', [WelcomeController::class, 'technicianLogin'])->name('technician-login');
-Route::get('/technician', [TechnicianController::class, 'index'])->name('technician');
-Route::post('/evolab-logout', [WelcomeController::class, 'logout'])->name('evolab-logout');
+Route::middleware(['technician'])->group(function () {
+    Route::get('/technician', [TechnicianController::class, 'index'])->name('technician');
+});
+
+Route::post('/evolab-logout', [WelcomeController::class, 'logout'])->name('evolab-logout')->middleware(['technician']);
+
 // Route::post('/manager', [WelcomeController::class, 'manager'])->name('manager');
 
 // Route::prefix('evolab')->group(function () {
