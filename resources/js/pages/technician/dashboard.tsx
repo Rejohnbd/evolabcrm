@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import '../../../css/welcome.css';
+// import '../../../css/welcome.css';
+import { formatDuration, formatTime, statusBadge, esc } from '@/lib/helper';
 
 // ============= TYPES =============
 interface Photo {
@@ -145,43 +146,6 @@ const DEMO_JOBS: Job[] = [
         dueDate: 'Tomorrow 5:00 PM',
     },
 ];
-
-// ============= UTILITY FUNCTIONS =============
-function formatDuration(ms: number): string {
-    if (!ms || ms < 0) return '00:00:00';
-    const s = Math.floor(ms / 1000);
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-}
-
-function formatTime(ts: number | null): string {
-    if (!ts) return '';
-    return new Date(ts).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-    });
-}
-
-function esc(str: string): string {
-    return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
-function statusBadge(status: string): string {
-    const labels: Record<string, string> = {
-        pending: 'PENDING',
-        in_progress: 'IN PROGRESS',
-        awaiting_validation: 'PENDING REVIEW',
-        completed: 'APPROVED',
-        rework: 'REWORK',
-    };
-    return labels[status] || 'PENDING';
-}
 
 // ============= MAIN COMPONENT =============
 interface TechnicianProps {
@@ -806,7 +770,7 @@ export default function TechnicianDashboard({
                 )}
             </main>
 
-            <style>{`
+            {/* <style>{`
                 @keyframes pulse {
                     0%, 100% { opacity: 1; }
                     50% { opacity: 0.5; }
@@ -849,7 +813,7 @@ export default function TechnicianDashboard({
                     margin: 0 auto;
                     padding: 0 20px;
                 }
-            `}</style>
+            `}</style> */}
         </div>
     );
 }
