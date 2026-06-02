@@ -60,3 +60,43 @@ export function statusBadge(status: string): string {
     };
     return labels[status] || 'PENDING';
 }
+
+export function getStatusConfig(status: string): {
+    text: string;
+    bgColor: string;
+    textColor: string;
+} {
+    const configs: Record<string, { bgColor: string; textColor: string }> = {
+        pending: {
+            bgColor: 'rgba(255,255,255,0.1)',
+            textColor: 'rgba(255,255,255,0.6)',
+        },
+        assigned: {
+            bgColor: 'rgba(59,130,246,0.2)',
+            textColor: '#60A5FA',
+        },
+        in_progress: {
+            bgColor: 'rgba(220,38,38,0.2)',
+            textColor: '#EF4444',
+        },
+        awaiting_validation: {
+            bgColor: 'rgba(234,179,8,0.2)',
+            textColor: '#EAB308',
+        },
+        completed: {
+            bgColor: 'rgba(34,197,94,0.2)',
+            textColor: '#22C55E',
+        },
+        rework: {
+            bgColor: 'rgba(249,115,22,0.2)',
+            textColor: '#F97316',
+        },
+    };
+
+    const config = configs[status] || configs.pending;
+    return {
+        text: getStatusText(status),
+        bgColor: config.bgColor,
+        textColor: config.textColor,
+    };
+}
