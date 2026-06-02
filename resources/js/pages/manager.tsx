@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
-import '../../../css/welcome.css';
+// import '../../../css/welcome.css';
 
 interface Job {
     id: string;
