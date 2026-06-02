@@ -14,32 +14,31 @@ return new class extends Migration
         Schema::create('service_jobs', function (Blueprint $table) {
             $table->id();
             $table->string('job_id')->unique()->index();
-            $table->string('customer');
+            $table->string('customer')->index();
             $table->string('phone')->nullable();
-            $table->string('vehicle');
+            $table->string('vehicle')->index();
             $table->string('color');
-            $table->string('plate');
-            $table->string('service');
+            $table->string('plate')->index();
+            $table->string('service')->index();
             $table->text('notes')->nullable();
             $table->enum('source', ['Retail', 'Dealer'])->default('Retail')->index();
             $table->enum('priority', ['normal', 'high'])->default('normal')->index();
             $table->timestamp('due_date')->nullable()->index();
-            // Current status - for fast queries
             $table->enum('status', [
-                'pending',           // Waiting for assignment
-                'assigned',          // Assigned to technician but not started
-                'in_progress',       // Technician working on it
-                'awaiting_validation', // Ready for manager review
-                'completed',         // Approved by manager
-                'rework'             // Sent back for corrections
+                'pending',
+                'assigned',
+                'in_progress',
+                'awaiting_validation',
+                'completed',
+                'rework'
             ])->default('pending')->index();
-
-            // Current assignment (denormalized for performance)
-            // $table->foreignId('current_assignment_id')->nullable()
-            //     ->constrained('service_job_assignments')->onDelete('set null');
-            $table->foreignId('current_technician_id')->nullable()
-                ->constrained('users')->onDelete('set null');
+            $table->unsignedBigInteger('current_technician_id')->nullable()->index();
             $table->timestamps();
+
+            $table->foreign('current_technician_id', 'fk_sj_current_technician')
+                ->references('id')
+                ->on('users')
+                ->onDelete('set null');
         });
     }
 

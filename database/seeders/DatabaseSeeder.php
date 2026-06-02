@@ -38,5 +38,9 @@ class DatabaseSeeder extends Seeder
             'email' => null,
             'password' => null,
         ]);
+
+        $this->call([
+            ServiceJobSeeder::class
+        ]);
     }
 }
