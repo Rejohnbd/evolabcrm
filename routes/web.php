@@ -12,6 +12,7 @@ Route::get('/', [WelcomeController::class, 'index'])->name('home');
 Route::post('/technician-login', [WelcomeController::class, 'technicianLogin'])->name('technician-login');
 Route::middleware(['technician'])->group(function () {
     Route::get('/technician', [TechnicianController::class, 'index'])->name('technician');
+    Route::post('/technician-shift-toggle', [TechnicianController::class, 'toggleShift'])->name('technician-shift-toggle');
 });
 
 // Manager routes

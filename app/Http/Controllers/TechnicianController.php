@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ServiceJob;
 use App\Models\Shift;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,9 +21,7 @@ class TechnicianController extends Controller
             ->orderBy('priority', 'desc')
             ->orderBy('created_at', 'asc')
             ->get()
-            ->map(function ($job) {
-                return $this->formatJobData($job);
-            });
+            ->map(fn($job) => $this->formatJobData($job));
 
         // Get jobs assigned to current technician
         $myJobs = ServiceJob::where('current_technician_id', $user->id)
@@ -30,29 +29,29 @@ class TechnicianController extends Controller
             ->orderBy('priority', 'desc')
             ->orderBy('due_date', 'asc')
             ->get()
-            ->map(function ($job) {
-                return $this->formatJobData($job);
+            ->map(fn($job) => $this->formatJobData($job));
+
+        // ✅ FIXED: Get completed jobs by current technician using whereHas
+        $completedJobs = ServiceJob::whereHas('assignments', function ($query) use ($user) {
+            $query->where('assigned_to', $user->id)
+                ->where('status', 'completed');
+        })
+            ->orderBy('updated_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($job) use ($user) {
+                $data = $this->formatJobData($job);
+                // Add assignment specific data
+                $assignment = $job->assignments()
+                    ->where('assigned_to', $user->id)
+                    ->where('status', 'completed')
+                    ->first();
+                if ($assignment) {
+                    $data['duration'] = $assignment->duration;
+                    $data['completed_at'] = $assignment->completed_at;
+                }
+                return $data;
             });
-
-
-        // Get completed jobs by current technician
-        // $completedJobs = ServiceJob::whereHas('assignments', function ($query) use ($user) {
-        //     $query->where('assigned_to', $user->id)
-        //         ->where('status', 'completed');
-        // })
-        //     ->orderBy('updated_at', 'desc')
-        //     ->limit(10)
-        //     ->get()
-        //     ->map(function ($job) {
-        //         $data = $this->formatJobData($job);
-        //         // Add assignment specific data
-        //         $assignment = $job->assignments()->where('assigned_to', Auth::id())->first();
-        //         if ($assignment) {
-        //             $data['duration'] = $assignment->duration;
-        //             $data['completed_at'] = $assignment->completed_at;
-        //         }
-        //         return $data;
-        //     });
 
         // Get current active job (in progress or awaiting validation)
         $activeJob = ServiceJob::where('current_technician_id', $user->id)
@@ -61,34 +60,76 @@ class TechnicianController extends Controller
 
         $activeJobData = $activeJob ? $this->formatJobData($activeJob) : null;
 
-        // Get or create today's shift
-        // $shift = Shift::firstOrCreate(
-        //     [
-        //         'user_id' => $user->id,
-        //         'shift_date' => Carbon::today()->toDateString(),
-        //     ],
-        //     [
-        //         'status' => 'active',
-        //     ]
-        // );
+        // Get today's active shift
+        $shift = Shift::where('user_id', $user->id)
+            ->whereDate('shift_date', Carbon::today())
+            ->where('status', 'active')
+            ->first();
 
-        // Get shift status for frontend
-        // $shiftData = [
-        //     'punched_in' => $shift->punch_in_at !== null && $shift->punch_out_at === null,
-        //     'punch_time' => $shift->punch_in_at ? $shift->punch_in_at->timestamp * 1000 : null,
-        //     'punch_in_at' => $shift->punch_in_at,
-        //     'punch_out_at' => $shift->punch_out_at,
-        //     'total_duration' => $shift->total_duration_minutes,
-        // ];
+        $shiftData = [
+            'punched_in' => $shift && $shift->punch_in_at !== null && $shift->punch_out_at === null,
+            'punch_time' => $shift && $shift->punch_in_at ? $shift->punch_in_at->timestamp * 1000 : null,
+            'punch_in_at' => $shift ? $shift->punch_in_at : null,
+            'punch_out_at' => $shift ? $shift->punch_out_at : null,
+            'total_duration' => $shift ? $shift->total_duration_minutes : null,
+        ];
 
         return Inertia::render('technician/dashboard', [
             'pendingJobs' => $pendingJobs,
             'myJobs' => $myJobs,
-            // 'completedJobs' => $completedJobs,
+            'completedJobs' => $completedJobs,
             'activeJob' => $activeJobData,
-            // 'shift' => $shiftData,
+            'shift' => $shiftData,
             'now' => now()->timestamp * 1000,
         ]);
+    }
+
+    /**
+     * Toggle shift (punch in / punch out)
+     */
+    public function toggleShift(Request $request)
+    {
+        $user = Auth::user();
+        $today = Carbon::today()->toDateString();
+
+        // Find active shift
+        $activeShift = Shift::where('user_id', $user->id)
+            ->whereDate('shift_date', $today)
+            ->where('status', 'active')
+            ->first();
+
+        if ($activeShift) {
+            // Punch Out
+            $duration = $activeShift->punch_in_at ? now()->diffInMinutes($activeShift->punch_in_at) : 0;
+            $overtime = max(0, $duration - 480);
+
+            $activeShift->update([
+                'punch_out_at' => now(),
+                'total_duration_minutes' => $duration,
+                'overtime_minutes' => $overtime,
+                'punch_out_location' => $request->input('location'),
+                'status' => 'completed',
+            ]);
+
+            return redirect()->back()->with('success', 'Punched out successfully');
+        }
+
+        // Check if there's a completed shift today (for multiple shifts support)
+        $completedShift = Shift::where('user_id', $user->id)
+            ->whereDate('shift_date', $today)
+            ->where('status', 'completed')
+            ->exists();
+
+        // Punch In - Create new shift
+        $shift = Shift::create([
+            'user_id' => $user->id,
+            'shift_date' => $today,
+            'punch_in_at' => now(),
+            'status' => 'active',
+            'punch_in_location' => $request->input('location'),
+        ]);
+
+        return redirect()->back()->with('success', 'Punched in successfully');
     }
 
 

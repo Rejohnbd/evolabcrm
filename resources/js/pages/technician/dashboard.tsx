@@ -1,6 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import { formatDuration, formatTime, esc, getStatusConfig } from '@/lib/helper';
+import { formatDuration, formatTime, esc } from '@/lib/helper';
 import { Job, TechnicianDashboardProps } from '@/types/technician';
 import MyJobCard from '@/components/technician/my-job-card';
 import JobCard from '@/components/technician/job-card';
@@ -24,6 +24,7 @@ export default function TechnicianDashboard({
         initialShift?.punch_time || null,
     );
     const [activeJob, setActiveJob] = useState(initialActiveJob || null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // Update clock every second
     useEffect(() => {
@@ -33,24 +34,41 @@ export default function TechnicianDashboard({
         return () => clearInterval(interval);
     }, []);
 
+    // Sync with props when they change (after page reload)
+    useEffect(() => {
+        setIsPunchedIn(initialShift?.punched_in || false);
+        setPunchTime(initialShift?.punch_time || null);
+        setActiveJob(initialActiveJob || null);
+    }, [initialShift, initialActiveJob]);
+
     const elapsed = isPunchedIn && punchTime ? currentNow - punchTime : 0;
 
     const handlePunch = () => {
+        if (isProcessing) return; // Prevent double clicks
+
+        setIsProcessing(true);
+
         router.post(
-            '/technician/shift/toggle',
+            '/technician-shift-toggle',
             {},
             {
+                preserveState: true,
+                preserveScroll: true,
                 onSuccess: () => {
-                    setIsPunchedIn(!isPunchedIn);
-                    if (!isPunchedIn) {
-                        setPunchTime(Date.now());
-                    } else {
-                        setPunchTime(null);
-                    }
+                    // Reload to get fresh data from server
+                    router.reload({
+                        onSuccess: () => {
+                            setIsProcessing(false);
+                        },
+                        onError: () => {
+                            setIsProcessing(false);
+                        },
+                    });
                 },
                 onError: (errors) => {
                     console.error('Punch error:', errors);
                     alert('Failed to toggle shift. Please try again.');
+                    setIsProcessing(false);
                 },
             },
         );
@@ -89,10 +107,6 @@ export default function TechnicianDashboard({
         } else if (job.status === 'assigned') {
             router.get(`/technician/checkin/${job.id}`);
         }
-    };
-
-    const handleLogout = () => {
-        router.post('/evolab/logout');
     };
 
     const hasActiveJob = !!activeJob;
@@ -196,6 +210,7 @@ export default function TechnicianDashboard({
 
                     <button
                         onClick={handlePunch}
+                        disabled={isProcessing}
                         style={{
                             width: '100%',
                             marginTop: '16px',
@@ -209,10 +224,15 @@ export default function TechnicianDashboard({
                                 : '#DC2626',
                             color: '#fff',
                             border: 'none',
-                            cursor: 'pointer',
+                            cursor: isProcessing ? 'wait' : 'pointer',
+                            opacity: isProcessing ? 0.7 : 1,
                         }}
                     >
-                        {isPunchedIn ? 'PUNCH OUT' : 'PUNCH IN'}
+                        {isProcessing
+                            ? 'PROCESSING...'
+                            : isPunchedIn
+                              ? 'PUNCH OUT'
+                              : 'PUNCH IN'}
                     </button>
                 </section>
 
