@@ -100,36 +100,57 @@ class TechnicianController extends Controller
 
         if ($activeShift) {
             // Punch Out
-            $duration = $activeShift->punch_in_at ? now()->diffInMinutes($activeShift->punch_in_at) : 0;
+            $punchIn = Carbon::parse($activeShift->punch_in_at);
+            $punchOut = Carbon::now();
+
+            // Calculate absolute difference in minutes
+            $duration = abs($punchIn->diffInMinutes($punchOut));
             $overtime = max(0, $duration - 480);
 
+            // Update shift with calculated values
             $activeShift->update([
-                'punch_out_at' => now(),
+                'punch_out_at' => $punchOut,
                 'total_duration_minutes' => $duration,
                 'overtime_minutes' => $overtime,
-                'punch_out_location' => $request->input('location'),
+                // 'punch_out_location' => $request->input('location'),
                 'status' => 'completed',
             ]);
 
-            return redirect()->back()->with('success', 'Punched out successfully');
+            return redirect()->back()->with('success', "Punched out successfully. Total duration: {$duration} minutes");
         }
 
-        // Check if there's a completed shift today (for multiple shifts support)
-        $completedShift = Shift::where('user_id', $user->id)
+        // Check for existing shift today
+        $existingShift = Shift::where('user_id', $user->id)
             ->whereDate('shift_date', $today)
-            ->where('status', 'completed')
-            ->exists();
+            ->first();
 
-        // Punch In - Create new shift
-        $shift = Shift::create([
-            'user_id' => $user->id,
-            'shift_date' => $today,
-            'punch_in_at' => now(),
-            'status' => 'active',
-            'punch_in_location' => $request->input('location'),
-        ]);
+        if ($existingShift && $existingShift->status === 'completed') {
+            // Create a new shift for the same day (multiple shifts allowed)
+            $shift = Shift::create([
+                'user_id' => $user->id,
+                'shift_date' => $today,
+                'punch_in_at' => now(),
+                'status' => 'active',
+                // 'punch_in_location' => $request->input('location'),
+            ]);
 
-        return redirect()->back()->with('success', 'Punched in successfully');
+            return redirect()->back()->with('success', 'Punched in successfully (Multiple shift)');
+        }
+
+        if (!$existingShift) {
+            // First shift of the day
+            $shift = Shift::create([
+                'user_id' => $user->id,
+                'shift_date' => $today,
+                'punch_in_at' => now(),
+                'status' => 'active',
+                // 'punch_in_location' => $request->input('location'),
+            ]);
+
+            return redirect()->back()->with('success', 'Punched in successfully');
+        }
+
+        return redirect()->back()->with('error', 'Unable to process shift toggle');
     }
 
 
