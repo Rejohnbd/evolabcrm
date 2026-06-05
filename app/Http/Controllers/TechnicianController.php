@@ -154,6 +154,118 @@ class TechnicianController extends Controller
     }
 
 
+    // Show Checkin Page
+    public function showCheckin($jobId)
+    {
+        $user = Auth::user();
+
+        // Check if technician is punched in
+        $shift = Shift::where('user_id', $user->id)
+            ->whereDate('shift_date', Carbon::today())
+            ->where('status', 'active')
+            ->first();
+
+        if (!$shift || $shift->punch_in_at === null) {
+            return redirect()->route('technician')->with('error', 'Please punch in before starting a job.');
+        }
+
+        $job = ServiceJob::where('job_id', $jobId)->firstOrFail();
+
+        // Check if job is already assigned to someone else
+        if ($job->status !== 'pending' && $job->current_technician_id !== $user->id) {
+            return redirect()->route('technician')->with('error', 'This job is already assigned to another technician.');
+        }
+
+        // Check if job is already in progress or completed
+        if (in_array($job->status, ['in_progress', 'awaiting_validation', 'completed'])) {
+            return redirect()->route('technician')->with('error', 'This job is already in progress or completed.');
+        }
+
+        // Simply return the checkin view without creating assignment
+        return Inertia::render('technician/checkin', [
+            'jobId' => $job->job_id,
+            'job' => [
+                'id' => $job->job_id,
+                'customer' => $job->customer,
+                'vehicle' => $job->vehicle,
+                'color' => $job->color,
+                'plate' => $job->plate,
+                'service' => $job->service,
+            ],
+        ]);
+    }
+
+    // Complete Checkin and Start Job Progress
+    public function completeCheckin(Request $request, $jobId)
+    {
+        $user = Auth::user();
+
+        // Check if technician is punched in
+        $shift = Shift::where('user_id', $user->id)
+            ->whereDate('shift_date', Carbon::today())
+            ->where('status', 'active')
+            ->first();
+
+        if (!$shift || $shift->punch_in_at === null) {
+            return redirect()->route('technician')->with('error', 'Please punch in before starting a job.');
+        }
+
+        $job = ServiceJob::where('job_id', $jobId)->firstOrFail();
+
+        // Check if job is already assigned to someone else
+        if ($job->status !== 'pending' && $job->current_technician_id !== $user->id) {
+            return redirect()->route('technician')->with('error', 'This job is already assigned to another technician.');
+        }
+
+        // Check if job is already in progress
+        if (in_array($job->status, ['in_progress', 'awaiting_validation', 'completed'])) {
+            return redirect()->route('technician')->with('error', 'This job is already in progress or completed.');
+        }
+
+        $request->validate([
+            'mileage' => 'required|string',
+            'fuelLevel' => 'required|string',
+            'keysReceived' => 'required|boolean',
+            'keyCount' => 'required|string',
+            'exteriorPhotos' => 'required|array|min:1',
+            'interiorPhotos' => 'required|array|min:1',
+            'damageNotes' => 'nullable|array',
+            'personalItems' => 'nullable|string',
+            'customerExpectations' => 'nullable|string',
+        ]);
+
+        $checkinData = [
+            'mileage' => $request->mileage,
+            'fuelLevel' => $request->fuelLevel,
+            'keysReceived' => $request->keysReceived,
+            'keyCount' => $request->keyCount,
+            'personalItems' => $request->personalItems,
+            'customerExpectations' => $request->customerExpectations,
+            'damageNotes' => $request->damageNotes,
+            'checked_in_at' => now()->toISOString(),
+        ];
+
+        // Create assignment ONLY when checkin is completed
+        $assignment = ServiceJobAssignment::create([
+            'service_job_id' => $job->id,
+            'assigned_to' => $user->id,
+            'status' => 'in_progress',
+            'assigned_at' => now(),
+            'started_at' => now(),
+            'checkin_data' => $checkinData,
+            'is_current' => true,
+        ]);
+
+        // Update job status
+        $job->update([
+            'status' => 'in_progress',
+            'current_technician_id' => $user->id,
+        ]);
+
+        // Redirect to job page
+        return redirect()->route('technician.job', $job->job_id)
+            ->with('success', 'Checkin completed. Job started successfully.');
+    }
     /**
      * Format job data for frontend
      */

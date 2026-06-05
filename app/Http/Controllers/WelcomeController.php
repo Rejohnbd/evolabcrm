@@ -77,43 +77,9 @@ class WelcomeController extends Controller
         return redirect()->route('manager');
     }
 
-    // public function technicianDashboard(Request $request): Response
-    // {
-    //     // Get or initialize session data
-    //     $shift = [
-    //         'punchedIn' => $request->session()->get('shift.punched_in', false),
-    //         'punchTime' => $request->session()->get('shift.punch_time'),
-    //     ];
 
-    //     $user = [
-    //         'name' => $request->session()->get('user.name', 'Adam'),
-    //         'role' => 'technician',
-    //     ];
 
-    //     return Inertia::render('technician', [
-    //         'shift' => $shift,
-    //         'user' => $user,
-    //     ]);
-    // }
 
-    // public function technician(Request $request): Response
-    // {
-    //     // Get or initialize session data
-    //     $shift = [
-    //         'punchedIn' => $request->session()->get('shift.punched_in', false),
-    //         'punchTime' => $request->session()->get('shift.punch_time'),
-    //     ];
-
-    //     $user = [
-    //         'name' => $request->session()->get('user.name', 'Adam'),
-    //         'role' => 'technician',
-    //     ];
-
-    //     return Inertia::render('technician', [
-    //         'shift' => $shift,
-    //         'user' => $user,
-    //     ]);
-    // }
 
     // public function checkin(Request $request, string $jobId): Response
     // {

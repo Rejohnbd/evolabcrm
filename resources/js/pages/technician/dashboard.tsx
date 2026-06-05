@@ -74,26 +74,16 @@ export default function TechnicianDashboard({
         );
     };
 
-    const handleStartJob = (jobId: string) => {
+    const handleCheckInJob = (jobId: string) => {
         if (activeJob) return;
         if (!isPunchedIn) {
             alert('Please punch in before starting a job.');
             return;
         }
 
-        router.post(
-            `/technician/job/${jobId}/start`,
-            {},
-            {
-                onSuccess: () => {
-                    // Navigation handled by controller redirect
-                },
-                onError: (errors) => {
-                    console.error('Start job error:', errors);
-                    alert('Failed to start job. Please try again.');
-                },
-            },
-        );
+        // Directly navigate to checkin page
+        // The checkin page will handle creating the assignment
+        router.get(`/technician-checkin/${jobId}`);
     };
 
     const handleResumeJob = (job: Job) => {
@@ -335,7 +325,7 @@ export default function TechnicianDashboard({
                                 key={job.id}
                                 job={job}
                                 hasActiveJob={hasActiveJob}
-                                onStart={handleStartJob}
+                                onStart={handleCheckInJob}
                             />
                         ))
                     )}

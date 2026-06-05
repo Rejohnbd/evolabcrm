@@ -6,12 +6,14 @@ import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import DashboardLayout from './layouts/dashboard-layout';
+import CheckinLayout from './layouts/checkin-layout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 const EVOLAB_PAGES = [
     'technician',
     'technician/dashboard',
+    // 'technician/checkin',
     'manager',
     'manager/dashboard',
 ];
@@ -24,6 +26,8 @@ createInertiaApp({
                 return null;
             case EVOLAB_PAGES.includes(name):
                 return DashboardLayout;
+            case name === 'technician/checkin':
+                return CheckinLayout;
             case name.startsWith('auth/'):
                 return AuthLayout;
             case name.startsWith('settings/'):
