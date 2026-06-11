@@ -100,3 +100,14 @@ export function getStatusConfig(status: string): {
         textColor: config.textColor,
     };
 }
+
+export function getStatusColor(status: string): string {
+    const colors: Record<string, string> = {
+        pending: 'rgba(255,255,255,0.1)',
+        in_progress: '#EF4444',
+        awaiting_validation: '#EAB308',
+        completed: '#22C55E',
+        rework: '#F97316',
+    };
+    return colors[status] || 'rgba(255,255,255,0.1)';
+}

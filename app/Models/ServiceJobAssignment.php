@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 
-
 class ServiceJobAssignment extends Model
 {
     protected $fillable = [
@@ -54,34 +53,37 @@ class ServiceJobAssignment extends Model
         return $this->belongsTo(Shift::class, 'shift_id');
     }
 
-
     public function validatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'validated_by');
     }
 
-    // Gallery relationship
+    // Galleries relationship for images
     public function galleries(): MorphMany
     {
         return $this->morphMany(Gallery::class, 'galleryable');
     }
 
-    public function exteriorPhotos(): MorphMany
+    // Get exterior photos from assignment
+    public function exteriorPhotos()
     {
         return $this->galleries()->where('type', 'exterior');
     }
 
-    public function interiorPhotos(): MorphMany
+    // Get interior photos from assignment
+    public function interiorPhotos()
     {
         return $this->galleries()->where('type', 'interior');
     }
 
-    public function damagePhotos(): MorphMany
+    // Get damage photos from assignment
+    public function damagePhotos()
     {
         return $this->galleries()->where('type', 'damage');
     }
 
-    public function afterPhotos(): MorphMany
+    // Get after photos from assignment
+    public function afterPhotos()
     {
         return $this->galleries()->where('type', 'after');
     }
@@ -89,11 +91,5 @@ class ServiceJobAssignment extends Model
     public function statusHistories(): HasMany
     {
         return $this->hasMany(JobStatusHistory::class, 'assignment_id');
-    }
-
-    // Scopes
-    public function scopeForShift($query, $shiftId)
-    {
-        return $query->where('shift_id', $shiftId);
     }
 }

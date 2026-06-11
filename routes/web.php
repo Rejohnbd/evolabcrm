@@ -23,6 +23,8 @@ Route::middleware(['technician'])->group(function () {
 Route::post('/manager-login', [WelcomeController::class, 'managerLogin'])->name('manager-login');
 Route::middleware(['manager'])->group(function () {
     Route::get('/manager', [ManagerController::class, 'index'])->name('manager');
+    Route::post('/manager-job-validate/{jobId}', [ManagerController::class, 'validateJob'])->name('manager.job.validate');
+    Route::get('/manager-job-details/{jobId}', [ManagerController::class, 'getJobDetails'])->name('manager.job.details');
 });
 
 Route::post('/evolab-logout', [WelcomeController::class, 'logout'])->name('evolab-logout')->middleware('auth');

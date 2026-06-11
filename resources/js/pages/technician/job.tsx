@@ -27,10 +27,6 @@ export default function Job({
 
     const elapsed = currentNow - startTime;
 
-    const handleBack = () => {
-        router.get('/technician/dashboard');
-    };
-
     const handleAddNote = () => {
         const text = prompt('Add progress note:');
         if (!text) return;
@@ -96,11 +92,6 @@ export default function Job({
         });
 
         input.click();
-    };
-
-    const handleRemovePhoto = (index: number) => {
-        // Remove photo (you can implement delete endpoint)
-        setAfterPhotos((prev) => prev.filter((_, i) => i !== index));
     };
 
     const handleCompleteJob = () => {
