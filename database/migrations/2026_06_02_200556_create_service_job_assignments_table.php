@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('service_job_id');
             $table->unsignedBigInteger('assigned_to');
+            $table->unsignedBigInteger('shift_id')->nullable();
             $table->enum('status', [
                 'pending',
                 'assigned',
@@ -46,6 +47,11 @@ return new class extends Migration
                 ->on('users')
                 ->onDelete('cascade');
 
+            $table->foreign('shift_id', 'fk_sja_shift_id')
+                ->references('id')
+                ->on('shifts')
+                ->onDelete('set null');
+
             $table->foreign('validated_by', 'fk_sja_validated_by')
                 ->references('id')
                 ->on('users')
@@ -53,6 +59,7 @@ return new class extends Migration
 
             $table->index(['service_job_id', 'is_current'], 'idx_sja_service_job_current');
             $table->index(['assigned_to', 'status'], 'idx_sja_assigned_status');
+            $table->index('shift_id', 'idx_sja_shift_id');
         });
     }
 

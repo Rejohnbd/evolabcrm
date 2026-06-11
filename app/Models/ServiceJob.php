@@ -90,6 +90,11 @@ class ServiceJob extends Model
         return $query->where('current_technician_id', $technicianId);
     }
 
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(JobStatusHistory::class, 'service_job_id');
+    }
+
     // Format job data for frontend
     public function formatForFrontend()
     {

@@ -1,4 +1,3 @@
-// resources/js/Layouts/DashboardLayout.tsx
 import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 import '../../css/welcome.css';

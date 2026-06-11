@@ -15,7 +15,8 @@ Route::middleware(['technician'])->group(function () {
     Route::post('/technician-shift-toggle', [TechnicianController::class, 'toggleShift'])->name('technician-shift-toggle');
     // Check-in 
     Route::get('/technician-checkin/{jobId}', [TechnicianController::class, 'showCheckin'])->name('technician-checkin');
-    Route::post('/technician-checkin-complete/{jobId}', [TechnicianController::class, 'completeCheckin'])->name('technician-checkin-complete');
+    Route::post('/technician-checkin-store', [TechnicianController::class, 'completeCheckin'])->name('technician-checkin-store');
+    Route::get('/technician-job/{jobId}', [TechnicianController::class, 'showJob'])->name('technician-job');
 });
 
 // Manager routes

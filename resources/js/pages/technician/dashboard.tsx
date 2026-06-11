@@ -88,7 +88,7 @@ export default function TechnicianDashboard({
 
     const handleResumeJob = (job: Job) => {
         if (job.status === 'in_progress') {
-            router.get(`/technician/job/${job.id}`);
+            router.get(`/technician-job/${job.id}`);
         } else if (
             job.status === 'awaiting_validation' ||
             job.status === 'rework'

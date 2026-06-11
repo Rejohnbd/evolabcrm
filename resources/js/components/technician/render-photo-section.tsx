@@ -1,4 +1,15 @@
 import { Photo } from '@/types/checkin';
+
+interface RenderPhotoSectionProps {
+    photos: Photo[];
+    type: 'exterior' | 'interior';
+    min: number;
+    title: string;
+    subtitle: string;
+    onAddPhoto: (type: 'exterior' | 'interior') => void;
+    onRemovePhoto: (type: 'exterior' | 'interior', index: number) => void;
+}
+
 export default function RenderPhotoSection({
     photos,
     type,
@@ -7,15 +18,7 @@ export default function RenderPhotoSection({
     subtitle,
     onAddPhoto,
     onRemovePhoto,
-}: {
-    photos: Photo[];
-    type: 'exterior' | 'interior';
-    min: number;
-    title: string;
-    subtitle: string;
-    onAddPhoto: (type: 'exterior' | 'interior') => void;
-    onRemovePhoto: (type: 'exterior' | 'interior', index: number) => void;
-}) {
+}: RenderPhotoSectionProps) {
     return (
         <section style={{ marginBottom: '24px' }}>
             <div
@@ -56,6 +59,7 @@ export default function RenderPhotoSection({
                     borderLeft: '1px solid rgba(255,255,255,0.1)',
                 }}
             >
+                {/* Photo Grid */}
                 {photos.length > 0 && (
                     <div
                         style={{
@@ -78,7 +82,7 @@ export default function RenderPhotoSection({
                             >
                                 <img
                                     src={photo.data}
-                                    alt=""
+                                    alt={`${title} ${i + 1}`}
                                     style={{
                                         width: '100%',
                                         height: '100%',
@@ -103,6 +107,15 @@ export default function RenderPhotoSection({
                                         border: 'none',
                                         color: '#fff',
                                         cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background =
+                                            '#DC2626';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background =
+                                            'rgba(0,0,0,0.7)';
                                     }}
                                 >
                                     ✕
@@ -111,6 +124,8 @@ export default function RenderPhotoSection({
                         ))}
                     </div>
                 )}
+
+                {/* Add Photo Button */}
                 <button
                     onClick={() => onAddPhoto(type)}
                     style={{
@@ -126,20 +141,39 @@ export default function RenderPhotoSection({
                         fontSize: '14px',
                         background: 'transparent',
                         cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#DC2626';
+                        e.currentTarget.style.color = '#fff';
+                        e.currentTarget.style.background =
+                            'rgba(220,38,38,0.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor =
+                            'rgba(255,255,255,0.2)';
+                        e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
+                        e.currentTarget.style.background = 'transparent';
                     }}
                 >
-                    📷 Add Photo
+                    <span style={{ fontSize: '18px' }}>📷</span>
+                    Add Photo
                 </button>
+
+                {/* Counter */}
                 <div
                     style={{
                         fontSize: '10px',
                         textAlign: 'center',
                         marginTop: '6px',
                         color: photos.length < min ? '#FB923C' : '#22C55E',
+                        transition: 'color 0.2s ease',
                     }}
                 >
                     {photos.length}/{min}{' '}
-                    {photos.length >= min ? '✓' : 'minimum'}
+                    {photos.length >= min
+                        ? '✓ Minimum met'
+                        : 'minimum required'}
                 </div>
             </div>
         </section>

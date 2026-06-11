@@ -4,6 +4,13 @@ import { CheckinData } from '@/types/technician';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
+// Helper function to convert base64 to File
+const base64ToFile = (base64: string, filename: string): Promise<File> => {
+    return fetch(base64)
+        .then((res) => res.blob())
+        .then((blob) => new File([blob], filename, { type: blob.type }));
+};
+
 export default function Checkin({
     jobId,
     job,
@@ -21,6 +28,7 @@ export default function Checkin({
         customerExpectations: existingCheckinData?.customerExpectations || '',
     });
     const [isProcessing, setIsProcessing] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     const canFinish =
         checkinData.mileage &&
@@ -32,44 +40,81 @@ export default function Checkin({
         router.get('/technician');
     };
 
-    const handleCompleteCheckin = () => {
+    const handleCompleteCheckin = async () => {
         if (!canFinish) return;
 
         setIsProcessing(true);
+        setUploadProgress(0);
 
-        // Create FormData to handle the request
-        const formData = new FormData();
-        formData.append('mileage', checkinData.mileage);
-        formData.append('fuelLevel', checkinData.fuelLevel);
-        formData.append('keysReceived', String(checkinData.keysReceived));
-        formData.append('keyCount', checkinData.keyCount);
-        formData.append('personalItems', checkinData.personalItems);
-        formData.append(
-            'exteriorPhotos',
-            JSON.stringify(checkinData.exteriorPhotos),
-        );
-        formData.append(
-            'interiorPhotos',
-            JSON.stringify(checkinData.interiorPhotos),
-        );
-        formData.append('damageNotes', JSON.stringify(checkinData.damageNotes));
-        formData.append(
-            'customerExpectations',
-            checkinData.customerExpectations,
-        );
+        try {
+            const formData = new FormData();
+            formData.append('jobId', jobId);
+            formData.append('mileage', checkinData.mileage);
+            formData.append('fuelLevel', checkinData.fuelLevel);
+            formData.append(
+                'keysReceived',
+                checkinData.keysReceived ? '1' : '0',
+            );
+            formData.append('keyCount', checkinData.keyCount);
+            formData.append('personalItems', checkinData.personalItems);
+            formData.append(
+                'customerExpectations',
+                checkinData.customerExpectations,
+            );
+            formData.append(
+                'damageNotes',
+                JSON.stringify(checkinData.damageNotes),
+            );
 
-        router.post(`/technician-checkin/${jobId}`, formData, {
-            onSuccess: () => {
-                // Redirect handled by controller
-            },
-            onError: (errors) => {
-                console.error('Checkin error:', errors);
-                alert('Failed to complete checkin. Please try again.');
-                setIsProcessing(false);
-            },
-        });
+            const totalPhotos =
+                checkinData.exteriorPhotos.length +
+                checkinData.interiorPhotos.length;
+            let processed = 0;
+
+            // Convert and append exterior photos as files
+            for (let i = 0; i < checkinData.exteriorPhotos.length; i++) {
+                const file = await base64ToFile(
+                    checkinData.exteriorPhotos[i].data,
+                    `exterior_${Date.now()}_${i}.jpg`,
+                );
+                formData.append('exteriorPhotos[]', file);
+                processed++;
+                setUploadProgress(Math.round((processed / totalPhotos) * 50));
+            }
+
+            // Convert and append interior photos as files
+            for (let i = 0; i < checkinData.interiorPhotos.length; i++) {
+                const file = await base64ToFile(
+                    checkinData.interiorPhotos[i].data,
+                    `interior_${Date.now()}_${i}.jpg`,
+                );
+                formData.append('interiorPhotos[]', file);
+                processed++;
+                setUploadProgress(Math.round((processed / totalPhotos) * 50));
+            }
+
+            setUploadProgress(100);
+
+            router.post('/technician-checkin-store', formData, {
+                onSuccess: () => {
+                    // Redirect handled by controller
+                },
+                onError: (errors) => {
+                    console.error('Checkin error:', errors);
+                    alert('Failed to complete checkin. Please try again.');
+                    setIsProcessing(false);
+                    setUploadProgress(0);
+                },
+            });
+        } catch (error) {
+            console.error('Error preparing upload:', error);
+            alert('Failed to prepare images for upload. Please try again.');
+            setIsProcessing(false);
+            setUploadProgress(0);
+        }
     };
 
+    // Rest of your component handlers (handleAddPhoto, handleRemovePhoto, etc.) remain the same
     const handleAddPhoto = (type: 'exterior' | 'interior') => {
         const input = document.createElement('input');
         input.type = 'file';
@@ -463,7 +508,6 @@ export default function Checkin({
                 </section>
 
                 {/* Photos Sections */}
-                {/* Photos Sections */}
                 <RenderPhotoSection
                     photos={checkinData.exteriorPhotos}
                     type="exterior"
@@ -473,6 +517,7 @@ export default function Checkin({
                     onAddPhoto={handleAddPhoto}
                     onRemovePhoto={handleRemovePhoto}
                 />
+
                 <RenderPhotoSection
                     photos={checkinData.interiorPhotos}
                     type="interior"
@@ -647,7 +692,7 @@ export default function Checkin({
                     </div>
                 </section>
 
-                {/* Submit Button */}
+                {/* Submit Button with Progress */}
                 <button
                     onClick={handleCompleteCheckin}
                     disabled={!canFinish || isProcessing}
@@ -667,9 +712,32 @@ export default function Checkin({
                             canFinish && !isProcessing
                                 ? 'pointer'
                                 : 'not-allowed',
+                        position: 'relative',
+                        overflow: 'hidden',
                     }}
                 >
-                    {isProcessing ? 'PROCESSING...' : 'COMPLETE & START'}
+                    {isProcessing ? (
+                        <>
+                            <span
+                                style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    height: '100%',
+                                    width: `${uploadProgress}%`,
+                                    background: 'rgba(255,255,255,0.2)',
+                                    transition: 'width 0.3s ease',
+                                }}
+                            />
+                            <span style={{ position: 'relative', zIndex: 1 }}>
+                                {uploadProgress < 100
+                                    ? `UPLOADING... ${uploadProgress}%`
+                                    : 'PROCESSING...'}
+                            </span>
+                        </>
+                    ) : (
+                        'COMPLETE & START'
+                    )}
                 </button>
                 {!canFinish && (
                     <div
@@ -684,13 +752,6 @@ export default function Checkin({
                     </div>
                 )}
             </main>
-
-            {/* <style>{`
-                .display-font { font-family: 'Anton', sans-serif; }
-                .label-tiny { font-size: 10px; text-transform: uppercase; letter-spacing: 0.25em; color: rgba(255,255,255,0.5); }
-                .header { border-bottom: 1px solid rgba(255,255,255,0.1); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(8px); z-index: 40; }
-                .container { max-width: 480px; margin: 0 auto; padding: 0 20px; }
-            `}</style> */}
         </>
     );
 }

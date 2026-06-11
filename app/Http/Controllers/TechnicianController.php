@@ -2,16 +2,26 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Gallery;
+use App\Models\JobStatusHistory;
 use App\Models\ServiceJob;
+use App\Models\ServiceJobAssignment;
 use App\Models\Shift;
+use App\Traits\HandlesImageUpload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class TechnicianController extends Controller
 {
+    use HandlesImageUpload;
+
     public function index(): Response
     {
         $user = Auth::user();
@@ -31,7 +41,7 @@ class TechnicianController extends Controller
             ->get()
             ->map(fn($job) => $this->formatJobData($job));
 
-        // ✅ FIXED: Get completed jobs by current technician using whereHas
+        //Get completed jobs by current technician using whereHas
         $completedJobs = ServiceJob::whereHas('assignments', function ($query) use ($user) {
             $query->where('assigned_to', $user->id)
                 ->where('status', 'completed');
@@ -196,8 +206,22 @@ class TechnicianController extends Controller
     }
 
     // Complete Checkin and Start Job Progress
-    public function completeCheckin(Request $request, $jobId)
+    public function completeCheckin(Request $request)
     {
+        // Validation for file uploads
+        $request->validate([
+            'jobId' => 'required|exists:service_jobs,job_id',
+            'mileage' => 'required|string',
+            'fuelLevel' => 'required|string',
+            'keysReceived' => 'required|in:0,1',
+            'keyCount' => 'required|string',
+            'exteriorPhotos.*' => 'image|mimes:jpeg,png,jpg|max:5120',
+            'interiorPhotos.*' => 'image|mimes:jpeg,png,jpg|max:5120',
+            'damageNotes' => 'nullable|string',
+            'personalItems' => 'nullable|string',
+            'customerExpectations' => 'nullable|string',
+        ]);
+
         $user = Auth::user();
 
         // Check if technician is punched in
@@ -210,61 +234,144 @@ class TechnicianController extends Controller
             return redirect()->route('technician')->with('error', 'Please punch in before starting a job.');
         }
 
-        $job = ServiceJob::where('job_id', $jobId)->firstOrFail();
+        DB::beginTransaction();
 
-        // Check if job is already assigned to someone else
-        if ($job->status !== 'pending' && $job->current_technician_id !== $user->id) {
-            return redirect()->route('technician')->with('error', 'This job is already assigned to another technician.');
+        try {
+            $job = ServiceJob::where('job_id', $request->jobId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $oldStatus = $job->status;
+
+            if ($job->status !== 'pending' && $job->current_technician_id !== $user->id) {
+                DB::rollBack();
+                return redirect()->route('technician')->with('error', 'This job is already assigned to another technician.');
+            }
+
+            if (in_array($job->status, ['in_progress', 'awaiting_validation', 'completed'])) {
+                DB::rollBack();
+                return redirect()->route('technician')->with('error', 'This job is already in progress or completed.');
+            }
+
+            $damageNotes = [];
+            if ($request->filled('damageNotes')) {
+                $damageNotes = json_decode($request->damageNotes, true) ?? [];
+            }
+
+            $checkinData = [
+                'mileage' => $request->mileage,
+                'fuelLevel' => $request->fuelLevel,
+                'keysReceived' => $request->keysReceived === '1',
+                'keyCount' => $request->keyCount,
+                'personalItems' => $request->personalItems ?? '',
+                'customerExpectations' => $request->customerExpectations ?? '',
+                'damageNotes' => $damageNotes,
+                'checked_in_at' => now()->toISOString(),
+            ];
+
+            // Create assignment with shift_id
+            $assignment = ServiceJobAssignment::create([
+                'service_job_id' => $job->id,
+                'assigned_to' => $user->id,
+                'shift_id' => $shift->id,  // ADD shift_id
+                'status' => 'in_progress',
+                'assigned_at' => now(),
+                'started_at' => now(),
+                'checkin_data' => $checkinData,
+                'is_current' => true,
+            ]);
+
+            // Save photos...
+            if ($request->hasFile('exteriorPhotos')) {
+                foreach ($request->file('exteriorPhotos') as $photo) {
+                    $this->saveUploadedFile($assignment, $photo, 'exterior', $user->id);
+                }
+            }
+
+            if ($request->hasFile('interiorPhotos')) {
+                foreach ($request->file('interiorPhotos') as $photo) {
+                    $this->saveUploadedFile($assignment, $photo, 'interior', $user->id);
+                }
+            }
+
+            $job->update([
+                'status' => 'in_progress',
+                'current_technician_id' => $user->id,
+            ]);
+
+
+            JobStatusHistory::record(
+                serviceJobId: $job->id,
+                oldStatus: $oldStatus,
+                newStatus: 'in_progress',
+                changedBy: $user->id,
+                assignmentId: $assignment->id,
+                shiftId: $shift->id,
+                notes: 'Job checked in and started by technician',
+                metadata: [
+                    'checkin_data' => [
+                        'mileage' => $request->mileage,
+                        'fuel_level' => $request->fuelLevel,
+                        'keys_received' => $request->keysReceived === '1',
+                    ],
+                    'technician_name' => $user->name,
+                    'shift_id' => $shift->id,
+                    'shift_date' => $shift->shift_date,
+                ]
+            );
+
+            DB::commit();
+
+            return redirect()->route('technician-job', $job->job_id)
+                ->with('success', 'Checkin completed. Job started successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Checkin error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to complete checkin. Please try again.');
         }
+    }
 
-        // Check if job is already in progress
-        if (in_array($job->status, ['in_progress', 'awaiting_validation', 'completed'])) {
-            return redirect()->route('technician')->with('error', 'This job is already in progress or completed.');
-        }
+    public function showJob($jobId)
+    {
+        $user = Auth::user();
 
-        $request->validate([
-            'mileage' => 'required|string',
-            'fuelLevel' => 'required|string',
-            'keysReceived' => 'required|boolean',
-            'keyCount' => 'required|string',
-            'exteriorPhotos' => 'required|array|min:1',
-            'interiorPhotos' => 'required|array|min:1',
-            'damageNotes' => 'nullable|array',
-            'personalItems' => 'nullable|string',
-            'customerExpectations' => 'nullable|string',
+        $job = ServiceJob::where('job_id', $jobId)
+            ->where('current_technician_id', $user->id)
+            ->firstOrFail();
+
+        $assignment = $job->currentAssignment;
+
+        // Get after photos from gallery
+        $afterPhotos = $assignment ? $assignment->galleries()->where('type', 'after')->get() : collect();
+
+        // Get progress notes
+        $progressNotes = $assignment ? ($assignment->progress_notes ?? []) : [];
+
+        // Get checkin data
+        $checkinData = $assignment ? $assignment->checkin_data : null;
+
+        return Inertia::render('technician/job', [
+            'job' => [
+                'id' => $job->job_id,
+                'customer' => $job->customer,
+                'vehicle' => $job->vehicle,
+                'color' => $job->color,
+                'plate' => $job->plate,
+                'service' => $job->service,
+                'status' => $job->status,
+            ],
+            'checkinData' => $checkinData,
+            'afterPhotos' => $afterPhotos->map(function ($photo) {
+                return [
+                    'id' => $photo->id,
+                    'data' => Storage::url($photo->image_path),
+                    'timestamp' => $photo->created_at->timestamp * 1000,
+                ];
+            }),
+            'progressNotes' => $progressNotes,
+            'startTime' => $assignment && $assignment->started_at ? $assignment->started_at->timestamp * 1000 : now()->timestamp * 1000,
+            'now' => now()->timestamp * 1000,
         ]);
-
-        $checkinData = [
-            'mileage' => $request->mileage,
-            'fuelLevel' => $request->fuelLevel,
-            'keysReceived' => $request->keysReceived,
-            'keyCount' => $request->keyCount,
-            'personalItems' => $request->personalItems,
-            'customerExpectations' => $request->customerExpectations,
-            'damageNotes' => $request->damageNotes,
-            'checked_in_at' => now()->toISOString(),
-        ];
-
-        // Create assignment ONLY when checkin is completed
-        $assignment = ServiceJobAssignment::create([
-            'service_job_id' => $job->id,
-            'assigned_to' => $user->id,
-            'status' => 'in_progress',
-            'assigned_at' => now(),
-            'started_at' => now(),
-            'checkin_data' => $checkinData,
-            'is_current' => true,
-        ]);
-
-        // Update job status
-        $job->update([
-            'status' => 'in_progress',
-            'current_technician_id' => $user->id,
-        ]);
-
-        // Redirect to job page
-        return redirect()->route('technician.job', $job->job_id)
-            ->with('success', 'Checkin completed. Job started successfully.');
     }
     /**
      * Format job data for frontend
@@ -291,5 +398,158 @@ class TechnicianController extends Controller
             'duration' => $assignment?->duration,
             'rejectionReason' => $assignment?->rejection_reason,
         ];
+    }
+
+    /**
+     * Save uploaded file to storage
+     */
+    private function saveUploadedFile($assignment, $file, string $type, int $userId): ?Gallery
+    {
+        try {
+            // Generate unique filename
+            $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+
+            // Store original image
+            $imagePath = $file->storeAs('uploads/images/' . date('Y/m/d'), $filename, 'public');
+
+            // Create thumbnail
+            $thumbnailPath = $this->createThumbnailFromFile($file, $filename);
+
+            // Create gallery record
+            return Gallery::create([
+                'galleryable_id' => $assignment->id,
+                'galleryable_type' => ServiceJobAssignment::class,
+                'type' => $type,
+                'image_path' => $imagePath,
+                'thumbnail_path' => $thumbnailPath,
+                'original_filename' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+                'uploaded_by' => $userId,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error saving file: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Create thumbnail from uploaded file
+     */
+    private function createThumbnailFromFile($file, string $filename): string
+    {
+        $path = 'uploads/thumbnails/' . date('Y/m/d');
+        $fullPath = $path . '/' . $filename;
+
+        // Get image data
+        $imageData = file_get_contents($file->getRealPath());
+
+        // Create thumbnail using GD
+        $img = imagecreatefromstring($imageData);
+        if ($img) {
+            $width = imagesx($img);
+            $height = imagesy($img);
+            $thumbWidth = 300;
+            $thumbHeight = intval(($thumbWidth / $width) * $height);
+
+            $thumb = imagecreatetruecolor($thumbWidth, $thumbHeight);
+            imagecopyresampled($thumb, $img, 0, 0, 0, 0, $thumbWidth, $thumbHeight, $width, $height);
+
+            // Save thumbnail as JPEG
+            ob_start();
+            imagejpeg($thumb, null, 80);
+            $thumbData = ob_get_clean();
+
+            Storage::disk('public')->put($fullPath, $thumbData);
+
+            imagedestroy($img);
+            imagedestroy($thumb);
+        } else {
+            // Fallback: store original as thumbnail
+            Storage::disk('public')->put($fullPath, $imageData);
+        }
+
+        return $fullPath;
+    }
+
+
+    public function addAfterPhoto(Request $request, $jobId)
+    {
+        $request->validate([
+            'photo' => 'required|string',
+        ]);
+
+        $user = Auth::user();
+
+        $job = ServiceJob::where('job_id', $jobId)
+            ->where('current_technician_id', $user->id)
+            ->firstOrFail();
+
+        $assignment = $job->currentAssignment;
+
+        DB::beginTransaction();
+
+        try {
+            $gallery = $this->saveImage($assignment, $request->photo, 'after', $user->id);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'photo' => [
+                    'id' => $gallery->id,
+                    'data' => Storage::url($gallery->image_path),
+                    'timestamp' => now()->timestamp * 1000,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Add photo error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => 'Failed to add photo'], 500);
+        }
+    }
+
+    // Get photos for assignment
+    public function getPhotos($assignmentId, $type = null)
+    {
+        $query = Gallery::where('galleryable_id', $assignmentId)
+            ->where('galleryable_type', ServiceJobAssignment::class);
+
+        if ($type) {
+            $query->where('type', $type);
+        }
+
+        $photos = $query->orderBy('order', 'asc')->get();
+
+        return $photos->map(function ($photo) {
+            return [
+                'id' => $photo->id,
+                'data' => Storage::url($photo->image_path),
+                'thumbnail' => Storage::url($photo->thumbnail_path),
+                'type' => $photo->type,
+                'timestamp' => $photo->created_at->timestamp * 1000,
+            ];
+        });
+    }
+
+    // Delete a photo
+    public function deletePhoto($photoId)
+    {
+        $user = Auth::user();
+
+        $photo = Gallery::where('id', $photoId)
+            ->where('uploaded_by', $user->id)
+            ->firstOrFail();
+
+        DB::beginTransaction();
+
+        try {
+            $this->deleteImage($photo);
+            DB::commit();
+
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'error' => 'Failed to delete photo'], 500);
+        }
     }
 }
