@@ -8,11 +8,21 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Http\RedirectResponse;
 
 class WelcomeController extends Controller
 {
-    public function index(): Response
+    public function index(): Response|RedirectResponse
     {
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user->role === 'technician') {
+                return redirect()->route('technician');
+            }
+            if ($user->role === 'manager') {
+                return redirect()->route('manager');
+            }
+        }
         return Inertia::render('welcome');
     }
 
