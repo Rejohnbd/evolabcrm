@@ -1,44 +1,8 @@
-import CheckinLayout from '@/layouts/checkin-layout';
+import RenderPhotoSection from '@/components/technician/render-photo-section';
+import { CheckinProps, Photo } from '@/types/checkin';
+import { CheckinData } from '@/types/technician';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-
-interface Photo {
-    data: string;
-    timestamp: number;
-}
-
-interface DamageNote {
-    location: string;
-    description: string;
-    timestamp: number;
-}
-
-interface CheckinData {
-    mileage: string;
-    fuelLevel: string;
-    keysReceived: boolean | null;
-    keyCount: string;
-    personalItems: string;
-    exteriorPhotos: Photo[];
-    interiorPhotos: Photo[];
-    damageNotes: DamageNote[];
-    customerExpectations: string;
-}
-
-interface Job {
-    id: string;
-    customer: string;
-    vehicle: string;
-    color: string;
-    plate: string;
-    service: string;
-}
-
-interface CheckinProps {
-    jobId: string;
-    job: Job;
-    existingCheckinData?: CheckinData | null;
-}
 
 export default function Checkin({
     jobId,
@@ -171,141 +135,6 @@ export default function Checkin({
             damageNotes: prev.damageNotes.filter((_, i) => i !== index),
         }));
     };
-
-    const renderPhotoSection = (
-        photos: Photo[],
-        type: 'exterior' | 'interior',
-        min: number,
-        title: string,
-        subtitle: string,
-    ) => (
-        <section style={{ marginBottom: '24px' }}>
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    gap: '8px',
-                    marginBottom: '12px',
-                }}
-            >
-                <div
-                    className="display-font"
-                    style={{ color: '#DC2626', fontSize: '18px' }}
-                >
-                    {type === 'exterior' ? '3.' : '4.'}
-                </div>
-                <div>
-                    <div
-                        className="display-font"
-                        style={{ fontSize: '14px', letterSpacing: '0.05em' }}
-                    >
-                        {title}
-                    </div>
-                    <div
-                        style={{
-                            fontSize: '11px',
-                            color: 'rgba(255,255,255,0.4)',
-                            marginTop: '2px',
-                        }}
-                    >
-                        {subtitle}
-                    </div>
-                </div>
-            </div>
-            <div
-                style={{
-                    paddingLeft: '20px',
-                    borderLeft: '1px solid rgba(255,255,255,0.1)',
-                }}
-            >
-                {photos.length > 0 && (
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(3, 1fr)',
-                            gap: '8px',
-                            marginBottom: '8px',
-                        }}
-                    >
-                        {photos.map((photo, i) => (
-                            <div
-                                key={i}
-                                style={{
-                                    aspectRatio: '1',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    borderRadius: '8px',
-                                    overflow: 'hidden',
-                                    position: 'relative',
-                                }}
-                            >
-                                <img
-                                    src={photo.data}
-                                    alt=""
-                                    style={{
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
-                                    }}
-                                />
-                                <button
-                                    onClick={() => handleRemovePhoto(type, i)}
-                                    style={{
-                                        position: 'absolute',
-                                        top: '4px',
-                                        right: '4px',
-                                        background: 'rgba(0,0,0,0.7)',
-                                        borderRadius: '50%',
-                                        padding: '4px',
-                                        width: '20px',
-                                        height: '20px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '10px',
-                                        border: 'none',
-                                        color: '#fff',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                <button
-                    onClick={() => handleAddPhoto(type)}
-                    style={{
-                        width: '100%',
-                        border: '1px dashed rgba(255,255,255,0.2)',
-                        borderRadius: '8px',
-                        padding: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        color: 'rgba(255,255,255,0.6)',
-                        fontSize: '14px',
-                        background: 'transparent',
-                        cursor: 'pointer',
-                    }}
-                >
-                    📷 Add Photo
-                </button>
-                <div
-                    style={{
-                        fontSize: '10px',
-                        textAlign: 'center',
-                        marginTop: '6px',
-                        color: photos.length < min ? '#FB923C' : '#22C55E',
-                    }}
-                >
-                    {photos.length}/{min}{' '}
-                    {photos.length >= min ? '✓' : 'minimum'}
-                </div>
-            </div>
-        </section>
-    );
 
     return (
         <>
@@ -634,20 +463,25 @@ export default function Checkin({
                 </section>
 
                 {/* Photos Sections */}
-                {renderPhotoSection(
-                    checkinData.exteriorPhotos,
-                    'exterior',
-                    1,
-                    'EXTERIOR PHOTOS',
-                    'Min 1 (front, back, sides)',
-                )}
-                {renderPhotoSection(
-                    checkinData.interiorPhotos,
-                    'interior',
-                    1,
-                    'INTERIOR PHOTOS',
-                    'Seats, dash, trunk',
-                )}
+                {/* Photos Sections */}
+                <RenderPhotoSection
+                    photos={checkinData.exteriorPhotos}
+                    type="exterior"
+                    min={1}
+                    title="EXTERIOR PHOTOS"
+                    subtitle="Min 1 (front, back, sides)"
+                    onAddPhoto={handleAddPhoto}
+                    onRemovePhoto={handleRemovePhoto}
+                />
+                <RenderPhotoSection
+                    photos={checkinData.interiorPhotos}
+                    type="interior"
+                    min={1}
+                    title="INTERIOR PHOTOS"
+                    subtitle="Seats, dash, trunk"
+                    onAddPhoto={handleAddPhoto}
+                    onRemovePhoto={handleRemovePhoto}
+                />
 
                 {/* Damage Section */}
                 <section style={{ marginBottom: '24px' }}>
